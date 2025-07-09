@@ -1,0 +1,39 @@
+﻿services:
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: notes-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - notes-data:/app
+    networks:
+      - notes-network
+    restart: unless-stopped
+
+  # Frontend service  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: notes-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - notes-network
+    restart: unless-stopped
+
+# Create a custom network for service communication
+networks:
+  notes-network:
+    driver: bridge
+
+# Volumes for persistent storage
+volumes:
+  notes-data:
