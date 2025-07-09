@@ -1,5 +1,5 @@
 ﻿# Use official Node.js LTS image
-FROM node:18
+FROM node:22
 
 # Set working directory inside container
 WORKDIR /app
