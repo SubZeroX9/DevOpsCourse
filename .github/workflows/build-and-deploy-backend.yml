@@ -30,6 +30,6 @@ jobs:
     if: ${{ needs.build.result == 'success' }}
     uses: ./.github/workflows/deploy-backend.yml
     with:
-      vm_host: ${{ inputs.vm_host != '' && inputs.vm_host || secrets.VM_HOST }}
+      vm_host: ${{ inputs.vm_host }}
       image_tag: ${{ inputs.tag }}
     secrets: inherit
