@@ -1,10 +1,10 @@
-﻿name: Build and Deploy Backend
+﻿name: Build and Deploy Frontend
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'backend/**'
+      - 'frontend/**'
   workflow_dispatch:
     inputs:
       vm_host:
@@ -20,16 +20,16 @@ on:
 
 jobs:
   build:
-    uses: ./.github/workflows/backend-build-push.yml
+    uses: ./.github/workflows/frontend-build-push.yml
     with:
       tag: ${{ inputs.tag }}
     secrets: inherit
 
   deploy:
-    needs: [build]
+    needs: build
     if: ${{ needs.build.result == 'success' }}
-    uses: ./.github/workflows/deploy-backend.yml
+    uses: ./.github/workflows/deploy-frontend.yml
     with:
-      vm_host: ${{ inputs.vm_host || secrets.VM_HOST }}
+      vm_host: ${{ inputs.vm_host != '' && inputs.vm_host || secrets.VM_HOST }}
       image_tag: ${{ inputs.tag }}
     secrets: inherit

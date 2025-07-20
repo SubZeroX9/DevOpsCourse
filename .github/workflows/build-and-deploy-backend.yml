@@ -2,7 +2,7 @@
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'backend/**'
   workflow_dispatch:
@@ -26,16 +26,10 @@ jobs:
     secrets: inherit
 
   deploy:
-    needs: [build]
+    needs: build
     if: ${{ needs.build.result == 'success' }}
-    runs-on: ubuntu-latest
-    env:
-      VM_HOST: ${{ github.event.inputs.vm_host || secrets.VM_HOST }}
-      IMAGE_TAG: ${{ inputs.tag }}
-    
-    steps:
-      - name: Deploy Backend
-        uses: ./.github/workflows/deploy-backend.yml
-        with:
-          vm_host: ${{ env.VM_HOST }}
-          image_tag: ${{ env.IMAGE_TAG }}
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      vm_host: ${{ inputs.vm_host != '' && inputs.vm_host || secrets.VM_HOST }}
+      image_tag: ${{ inputs.tag }}
+    secrets: inherit
