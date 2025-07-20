@@ -1,11 +1,24 @@
 ﻿name: Build and Push Backend Image
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'backend/**'
+  workflow_call:
+    inputs:
+      tag:
+        description: "Custom tag for the image"
+        required: false
+        type: string
+        default: "latest"
+    outputs:
+      image-tag:
+        description: "The built image tag"
+        value: ${{ jobs.build-and-push-backend.outputs.image-tag }}
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Custom tag for the image"
+        required: false
+        type: string
+        default: "latest"
 
 env:
   REGISTRY: docker.io
@@ -14,6 +27,8 @@ env:
 jobs:
   build-and-push-backend:
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.event.inputs.tag || inputs.tag || 'latest' }}
 
     steps:
       - name: Checkout repository
@@ -25,22 +40,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata for backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.event.inputs.tag || inputs.tag || 'latest' }}
