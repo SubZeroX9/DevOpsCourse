@@ -33,3 +33,4 @@ jobs:
       vm_host: ${{ inputs.vm_host }}
       image_tag: ${{ inputs.tag }}
     secrets: inherit
+
