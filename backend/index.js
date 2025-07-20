@@ -22,6 +22,18 @@ app.post('/api/notes', (req, res) => {
     res.status(201).json(newNote);
 });
 
+app.delete('/api/notes/:id', (req, res) => {
+    const notes = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
+    const noteId = parseInt(req.params.id);
+    const filteredNotes = notes.filter(note => note.id !== noteId);
+    fs.writeFileSync(NOTES_FILE, JSON.stringify(filteredNotes, null, 2));
+    res.json({ message: 'Note deleted successfully' });
+})
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 const cors = require('cors');
 
 app.use(cors({
