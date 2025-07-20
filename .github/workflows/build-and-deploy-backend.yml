@@ -18,10 +18,6 @@ on:
         type: string
         default: 'latest'
 
-env:
-  VM_HOST: ${{ github.event.inputs.vm_host || secrets.VM_HOST }}
-  IMAGE_TAG: ${{ inputs.tag || 'latest' }}
-
 jobs:
   build:
     uses: ./.github/workflows/backend-build-push.yml
@@ -34,6 +30,6 @@ jobs:
     if: ${{ needs.build.result == 'success' }}
     uses: ./.github/workflows/deploy-backend.yml
     with:
-      vm_host: ${{ env.VM_HOST }}
-      image_tag: ${{ env.IMAGE_TAG }}
+      vm_host: ${{ github.event.inputs.vm_host || secrets.VM_HOST }}
+      image_tag: ${{ inputs.tag }}
     secrets: inherit
