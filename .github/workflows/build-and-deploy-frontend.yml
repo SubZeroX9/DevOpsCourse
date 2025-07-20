@@ -1,16 +1,17 @@
-﻿name: Build and Deploy Frontend
+﻿name: Build and Deploy Backend
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'frontend/**'
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       vm_host:
         description: 'VM IP address or hostname'
-        required: true
+        required: false
         type: string
+        default: ''
       tag:
         description: 'Docker image tag'
         required: false
@@ -19,16 +20,16 @@ on:
 
 jobs:
   build:
-    uses: ./.github/workflows/frontend-build-push.yml
+    uses: ./.github/workflows/backend-build-push.yml
     with:
-      tag: ${{ github.event.inputs.tag || 'latest' }}
+      tag: ${{ inputs.tag }}
     secrets: inherit
 
   deploy:
     needs: [build]
     if: ${{ needs.build.result == 'success' }}
-    uses: ./.github/workflows/deploy-frontend.yml
+    uses: ./.github/workflows/deploy-backend.yml
     with:
-      vm_host: ${{ github.event.inputs.vm_host || secrets.VM_HOST }}
-      image_tag: ${{ github.event.inputs.tag || 'latest' }}
+      vm_host: ${{ inputs.vm_host || secrets.VM_HOST }}
+      image_tag: ${{ inputs.tag }}
     secrets: inherit
