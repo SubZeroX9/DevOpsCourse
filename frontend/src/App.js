@@ -23,6 +23,15 @@ function App() {
         });
     };
 
+    const deleteNote = (id) => {
+        fetch(`/api/notes/${id}`, {
+            method: 'DELETE'
+        })
+            .then(() => {
+                setNotes(notes.filter(note => note.id !== id));
+            });
+    };
+
     return (
         <div style={{ padding: 20 }}>
             <h1>Notes</h1>
@@ -30,7 +39,10 @@ function App() {
             <button onClick={addNote}>Add</button>
             <ul>
                 {notes.map(note => (
-                    <li key={note.id}>{note.text}</li>
+                    <li key={note.id}>
+                        {note.text}
+                        <button onClick={() => deleteNote(note.id)}>Delete</button>
+                    </li>
                 ))}
             </ul>
         </div>
