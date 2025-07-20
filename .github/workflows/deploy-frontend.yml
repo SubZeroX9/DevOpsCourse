@@ -1,0 +1,81 @@
+﻿name: Deploy Frontend via SSH
+
+on:
+  workflow_call:
+    inputs:
+      vm_host:
+        description: 'VM IP address or hostname'
+        required: true
+        type: string
+      image_tag:
+        description: 'Frontend image tag'
+        required: false
+        type: string
+        default: 'latest'
+  workflow_dispatch:
+    inputs:
+      vm_host:
+        description: 'VM IP address or hostname'
+        required: true
+        type: string
+      image_tag:
+        description: 'Frontend image tag'
+        required: false
+        type: string
+        default: 'latest'
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ github.event.inputs.vm_host }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -o ConnectTimeout=10 ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} "echo 'SSH connection successful'"
+
+      - name: Deploy Frontend
+        run: |
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+            set -e
+          
+            docker stop notes-frontend || true
+            docker rm notes-frontend || true
+          
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-app-frontend:${{ github.event.inputs.image_tag }}
+          
+            docker network create notes-network || true
+          
+            docker run -d \
+              --name notes-frontend \
+              --network notes-network \
+              -p 80:80 \
+              --restart unless-stopped \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-app-frontend:${{ github.event.inputs.image_tag }}
+          EOF
+
+      - name: Check frontend status
+        run: |
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+            docker ps --filter 'name=notes-frontend' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
+          
+            sleep 3
+            if curl -f http://localhost:80 2>/dev/null >/dev/null; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "⚠️  Frontend health check failed"
+            fi
+          EOF
+
+      - name: Display access information
+        run: |
+          echo "Frontend: http://${{ github.event.inputs.vm_host }}"

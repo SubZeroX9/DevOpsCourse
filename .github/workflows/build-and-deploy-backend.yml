@@ -1,0 +1,37 @@
+﻿name: Build and Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+    inputs:
+      vm_host:
+        description: 'VM IP address or hostname'
+        required: true
+        type: string
+      tag:
+        description: 'Docker image tag'
+        required: false
+        type: string
+        default: 'latest'
+
+env:
+  VM_HOST: ${{ secrets.VM_HOST }}
+
+jobs:
+  build:
+    uses: ./.github/workflows/backend-build-push.yml
+    with:
+      tag: ${{ github.event.inputs.tag || 'latest' }}
+    secrets: inherit
+
+  deploy:
+    needs: [build]
+    if: ${{ needs.build.result == 'success' }}
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      vm_host: ${{ github.event.inputs.vm_host || env.VM_HOST }}
+      image_tag: ${{ github.event.inputs.tag || 'latest' }}
+    secrets: inherit

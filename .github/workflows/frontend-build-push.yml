@@ -1,11 +1,24 @@
 ﻿name: Build and Push Frontend Image
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'frontend/**'
+  workflow_call:
+    inputs:
+      tag:
+        description: "Custom tag for the image"
+        required: false
+        type: string
+        default: "latest"
+    outputs:
+      image-tag:
+        description: "The built image tag"
+        value: ${{ jobs.build-and-push-frontend.outputs.image-tag }}
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Custom tag for the image"
+        required: false
+        type: string
+        default: "latest"
 
 env:
   REGISTRY: docker.io
@@ -14,6 +27,8 @@ env:
 jobs:
   build-and-push-frontend:
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.event.inputs.tag || inputs.tag || 'latest' }}
 
     steps:
       - name: Checkout repository
@@ -25,22 +40,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.event.inputs.tag || inputs.tag || 'latest' }}

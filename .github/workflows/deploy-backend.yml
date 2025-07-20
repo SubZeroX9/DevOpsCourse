@@ -1,0 +1,83 @@
+﻿name: Deploy Backend via SSH
+
+on:
+  workflow_call:
+    inputs:
+      vm_host:
+        description: 'VM IP address or hostname'
+        required: true
+        type: string
+      image_tag:
+        description: 'Backend image tag'
+        required: false
+        type: string
+        default: 'latest'
+  workflow_dispatch:
+    inputs:
+      vm_host:
+        description: 'VM IP address or hostname'
+        required: true
+        type: string
+      image_tag:
+        description: 'Backend image tag'
+        required: false
+        type: string
+        default: 'latest'
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ github.event.inputs.vm_host }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -o ConnectTimeout=10 ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} "echo 'SSH connection successful'"
+
+      - name: Deploy Backend
+        run: |
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+            set -e
+          
+            docker stop notes-backend || true
+            docker rm notes-backend || true
+          
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-app-backend:${{ github.event.inputs.image_tag }}
+          
+            docker network create notes-network || true
+            docker volume create notes-data || true
+          
+            docker run -d \
+              --name notes-backend \
+              --network notes-network \
+              -p 5000:5000 \
+              -v notes-data:/app \
+              --restart unless-stopped \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-app-backend:${{ github.event.inputs.image_tag }}
+          EOF
+
+      - name: Check backend status
+        run: |
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+            docker ps --filter 'name=notes-backend' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
+          
+            sleep 3
+            if curl -f http://localhost:5000/health 2>/dev/null >/dev/null; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️  Backend health check failed"
+            fi
+          EOF
+
+      - name: Display access information
+        run: |
+          echo "Backend API: http://${{ github.event.inputs.vm_host }}:5000"
