@@ -2,15 +2,16 @@
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'backend/**'
   workflow_dispatch:
     inputs:
       vm_host:
         description: 'VM IP address or hostname'
-        required: true
+        required: false
         type: string
+        default: ''
       tag:
         description: 'Docker image tag'
         required: false
@@ -21,14 +22,15 @@ jobs:
   build:
     uses: ./.github/workflows/backend-build-push.yml
     with:
-      tag: ${{ github.event.inputs.tag || 'latest' }}
+      tag: ${{ inputs.tag }}
     secrets: inherit
 
   deploy:
-    needs: [build]
+    needs: build
     if: ${{ needs.build.result == 'success' }}
     uses: ./.github/workflows/deploy-backend.yml
     with:
-      vm_host: ${{ github.event.inputs.vm_host || secrets.VM_HOST }}
-      image_tag: ${{ github.event.inputs.tag || 'latest' }}
+      vm_host: ${{ inputs.vm_host }}
+      image_tag: ${{ inputs.tag }}
     secrets: inherit
+

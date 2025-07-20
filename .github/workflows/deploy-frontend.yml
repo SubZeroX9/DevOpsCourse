@@ -5,7 +5,7 @@ on:
     inputs:
       vm_host:
         description: 'VM IP address or hostname'
-        required: true
+        required: false
         type: string
       image_tag:
         description: 'Frontend image tag'
@@ -37,15 +37,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ github.event.inputs.vm_host }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ github.event.inputs.vm_host || secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
         run: |
-          ssh -o ConnectTimeout=10 ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} "echo 'SSH connection successful'"
+          ssh -o ConnectTimeout=10 ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host || secrets.VM_HOST }} "echo 'SSH connection successful'"
 
       - name: Deploy Frontend
         run: |
-          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host || secrets.VM_HOST }} << 'EOF'
             set -e
           
             docker stop notes-frontend || true
@@ -65,7 +65,7 @@ jobs:
 
       - name: Check frontend status
         run: |
-          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host }} << 'EOF'
+          ssh ${{ secrets.VM_SSH_USER }}@${{ github.event.inputs.vm_host || secrets.VM_HOST }} << 'EOF'
             docker ps --filter 'name=notes-frontend' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
           
             sleep 3
@@ -78,4 +78,4 @@ jobs:
 
       - name: Display access information
         run: |
-          echo "Frontend: http://${{ github.event.inputs.vm_host }}"
+          echo "Frontend: http://${{ github.event.inputs.vm_host || secrets.VM_HOST }}"
