@@ -19,6 +19,9 @@ on:
         default: 'latest'
 
 jobs:
+  env:
+    actual_vm_host: ${{ inputs.vm_host || secrets.VM_HOST }}
+    
   build:
     uses: ./.github/workflows/frontend-build-push.yml
     with:
@@ -30,6 +33,6 @@ jobs:
     if: ${{ needs.build.result == 'success' }}
     uses: ./.github/workflows/deploy-frontend.yml
     with:
-      vm_host: ${{ inputs.vm_host != '' && inputs.vm_host || secrets.VM_HOST }}
+      vm_host: ${{ actual_vm_host }}
       image_tag: ${{ inputs.tag }}
     secrets: inherit
